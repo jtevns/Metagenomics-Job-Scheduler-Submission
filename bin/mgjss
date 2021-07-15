@@ -1,0 +1,18 @@
+# main with cli
+import click
+from mgjss.assembly import assemble
+from mgjss.mapping import map
+from mgjss.binning import concoct
+from mgjss.anvio import anvio
+
+@click.group()
+def cli():
+    pass
+
+cli.add_command(assemble)
+cli.add_command(map)
+cli.add_command(concoct)
+cli.add_command(anvio)
+
+if __name__ == "__main__":
+    cli()
