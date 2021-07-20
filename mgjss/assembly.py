@@ -43,7 +43,6 @@ def assemble(fastqs,assembly_scheme,overwrite,output_dir,account):
         r1 = ",".join(fqs[0])
         r2 = ",".join(fqs[1])
 
-
         #create and submit jobs
         # 1 assemble
         megahit_job = SlurmJob(
