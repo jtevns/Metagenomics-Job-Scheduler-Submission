@@ -8,7 +8,7 @@ setup(
     name='mgjss',
     version='0.1',
     packages=find_packages(),
-    scripts=['bin/mgjss','scripts/rename_contigs_in_binlists.py','scripts/rename_contigs_in_bam_header.py'],
+    scripts=['bin/mgjss','scripts/rename_contigs_in_binlists.py','scripts/rename_contigs_in_bam_header.py','scripts/extract_bins.py'],
 
     install_requires=[],
 )
