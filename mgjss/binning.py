@@ -6,17 +6,13 @@ import pandas as pds
 
 def get_bam_paths(table,ref,keys):
     bam_paths = []
-    data = pds.read_csv(table, header=0)
-
     for key in keys:
-        path = data.loc[(data["ref"] == ref) & (data["sample"] == key), "path"].item()
+        path = table.loc[(table["ref"] == ref) & (table["sample"] == key), "path"].item()
         bam_paths.append(path)
-
     return(",".join(bam_paths))
 
 def get_assem_path(table, key):
-    data = pds.read_csv(table, header=0)
-    ref_path = data.loc[data["assembly"] == key, "path"].item()
+    ref_path = table.loc[table["assembly"] == key, "path"].item()
     return(ref_path)
 
 # cli for inputs
@@ -35,7 +31,12 @@ def concoct(assemblies,bams,binning_scheme,overwrite,output_dir,account):
     with open(binning_scheme) as f:
         scheme = load(f, Loader=FullLoader)
 
-    # for each sample create the binning jobs 
+    #open bam csv
+    bam_data = pds.read_csv(bams, header=0)
+     #open assembly csv
+    assem_data = pds.read_csv(assemblies, header=0)
+
+    # for each sample create the binning jobs  
     for assembly in scheme.keys():
        #make sample dir in output dir
         if not os.path.exists(output_dir + "/" + assembly):os.makedirs(output_dir + "/" + assembly)
@@ -43,14 +44,14 @@ def concoct(assemblies,bams,binning_scheme,overwrite,output_dir,account):
         if not os.path.exists(output_dir + "/" + assembly + "/bins"):os.makedirs(output_dir + "/" + assembly + "/bins")
 
         # get paths to assembly and bams
-        assembly_fasta = get_assem_path(assemblies,assembly)
-        bams = get_bam_paths(bams,assembly,scheme[assembly])
+        assembly_fasta = get_assem_path(assem_data,assembly)
+        bams = get_bam_paths(bam_data,assembly,scheme[assembly])
 
         #make output paths
         cut_fasta = output_dir + "/" + assembly + "/contigs_10k.fasta"
         cut_bed = output_dir + "/" + assembly + "/contigs_10k.bed"
         cov_table = output_dir + "/" + assembly + "/coverage_table.tsv"
-        bin_dir = output_dir + "/" + assembly + "/bins"
+        bin_dir = output_dir + "/" + assembly + "/extracted_bins"
         concoct_output = output_dir + "/" + assembly + "/concoct_output/"
         checkm_dir = output_dir + "/" + assembly + "/checkm"
         binstats = output_dir + "/" + assembly + "/binstats.tsv"
@@ -99,7 +100,7 @@ def concoct(assemblies,bams,binning_scheme,overwrite,output_dir,account):
             cores=1,
             mem="8gb",
             dependency=concoct_jobid,
-            cmd="singularity exec /nfs/turbo/lsa-dudelabs/containers/concoct/concoct.sif merge_cutup_clustering.py {}/clustering_gt1000.csv > {}/clustering_merged.csv".format(concoct_output, concoct_output)
+            cmd="singularity exec /nfs/turbo/lsa-dudelabs/containers/concoct/concoct.sif merge_cutup_clustering.py {}/clustering_gt1000.csv > {}clustering_merged.csv".format(concoct_output, concoct_output)
         )
         merge_contigs_jobid = merge_contigs_job.submit()
         print(merge_contigs_jobid)
@@ -111,7 +112,7 @@ def concoct(assemblies,bams,binning_scheme,overwrite,output_dir,account):
             cores=1,
             mem="8gb",
             dependency=merge_contigs_jobid,
-            cmd="singularity exec /nfs/turbo/lsa-dudelabs/containers/concoct/concoct.sif extract_fasta_bins.py {} {}/clustering_merged.csv --output_path {}".format(assembly_fasta, concoct_output, bin_dir)
+            cmd="extract_bins.py {} {}/clustering_merged.csv {}".format(assembly_fasta, concoct_output, bin_dir)
         )
         extract_fastas_jobid = extract_fastas_job.submit()
         print(extract_fastas_jobid)

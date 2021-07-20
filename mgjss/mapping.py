@@ -4,16 +4,12 @@ from yaml import load, dump, FullLoader
 from mgjss.slurm import SlurmJob
 import pandas as pds
 
-def get_fastq_paths(table, key):
-    data = pds.read_csv(table, header=0)
-
+def get_fastq_paths(data, key):
     r1 = data.loc[data["sample"] == key, "qced_fq1"].item()
     r2 = data.loc[data["sample"] == key, "qced_fq2"].item()
-
     return(r1, r2)
 
-def get_ref_path(table,key):
-    data = pds.read_csv(table, header=0)
+def get_ref_path(data,key):
     ref_path = data.loc[data["assembly"] == key, "path"].item()
     return(ref_path)
 
@@ -34,6 +30,12 @@ def map(fastqs,assemblies,mapping_scheme,overwrite,output_dir,account):
     #parse binning_scheme
     with open(mapping_scheme) as f:
         scheme = load(f, Loader=FullLoader)
+    
+    #open fastq table
+    fastq_table = pds.read_csv(fastqs, header=0)
+
+    #open assembly table
+    assembly_table = pds.read_csv(assemblies, header=0)
 
     # for each sample create the binning jobs 
     for ref in scheme.keys():
@@ -41,7 +43,7 @@ def map(fastqs,assemblies,mapping_scheme,overwrite,output_dir,account):
         if not os.path.exists(output_dir + "/" + ref):os.makedirs(output_dir + "/" + ref)
 
         # get paths to assembly and bams
-        ref_path = get_ref_path(assemblies, ref)
+        ref_path = get_ref_path(assembly_table, ref)
         # 1 index ref
         index_ref_job = SlurmJob(
             name="index_ref-" + str(ref),
@@ -54,8 +56,8 @@ def map(fastqs,assemblies,mapping_scheme,overwrite,output_dir,account):
         index_ref_id = index_ref_job.submit()
         print(index_ref_id)
 
-        for sample in scheme[ref]:
-            fqs = get_fastq_paths(fastqs, sample)
+        for sample in scheme[ref]:          
+            fqs = get_fastq_paths(fastq_table, sample)
             r1 = fqs[0]
             r2 = fqs[1]
             outbam = sample + "_sorted.bam"
